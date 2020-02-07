@@ -58,14 +58,25 @@ namespace GraphDemo
             Stopwatch watch = Stopwatch.StartNew();
 
             // Generate the data for the graph
-            Task first = Task.Run(() => generateGraphData(data, 0, pixelWidth / 4, token));
-            Task second = Task.Run(() => generateGraphData(data, pixelWidth / 4, pixelWidth / 2, token));
+            Task first = Task.Run(() => generateGraphData(data, 0, pixelWidth / 4, token), token);
+            Task second = Task.Run(() => generateGraphData(data, pixelWidth / 4, pixelWidth / 2, token), token);
             //Task.WaitAll(first, second);
-            await first;
-            await second;
+
+            try
+            {
+                await first;
+                await second;
+                duration.Text = $"Duration(ms):{watch.ElapsedMilliseconds}";
+            }
+            catch(OperationCanceledException oce)
+            {
+                duration.Text = oce.Message;
+            }
 
             // Display the time taken to generate the data
             duration.Text = $"Duration (ms): {watch.ElapsedMilliseconds}";
+            string message = $"Status of tasks is {first.Status},{second.Status}";
+            messages.Text = message;
 
             // Display the data by using the bitmap
             Stream pixelStream = graphBitmap.PixelBuffer.AsStream();
@@ -97,10 +108,11 @@ namespace GraphDemo
                 double p = Math.Sqrt(b - s);
                 for (double i = -p; i < p; i += 3)
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        return;
-                    }
+                    //if (token.IsCancellationRequested)
+                    //{
+                    //    return;
+                    //}
+                    token.ThrowIfCancellationRequested();
                     double r = Math.Sqrt(s + i * i) / a;
                     double q = (r - 1) * Math.Sin(24 * r);
                     double y = i / 3 + (q * c);
